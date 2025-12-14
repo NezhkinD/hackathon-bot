@@ -24,37 +24,42 @@ class HtmlExportParser implements ParserInterface
         $participants = [];
         $mentions = [];
         $channels = [];
+        $forwardedAuthors = [];
 
         $crawler->filter('.message, .tgme_widget_message')->each(
-            function (Crawler $node) use (&$participants, &$mentions, &$channels) {
-                $this->processMessage($node, $participants, $mentions, $channels);
+            function (Crawler $node) use (&$participants, &$mentions, &$channels, &$forwardedAuthors) {
+                $this->processMessage($node, $participants, $mentions, $channels, $forwardedAuthors);
             }
         );
 
-        return new ProcessingResult($participants, $mentions, $channels);
+        return new ProcessingResult($participants, $mentions, $channels, $forwardedAuthors);
     }
 
     private function processMessage(
         Crawler $node,
         array &$participants,
         array &$mentions,
-        array &$channels
+        array &$channels,
+        array &$forwardedAuthors
     ): void {
-        $fromNode = $node->filter('.from_name, .tgme_widget_message_owner_name');
-        if ($fromNode->count() > 0) {
-            $name = trim($fromNode->text());
-            if (!empty($name) && $name !== 'Deleted Account') {
-                $id = md5($name);
-                $participants[$id] = new Participant(id: $id, name: $name);
+        // Извлекаем автора пересланного сообщения (если есть)
+        $fwdNode = $node->filter('.forwarded .from_name, .tgme_widget_message_forwarded_from_name');
+        if ($fwdNode->count() > 0) {
+            $fwdName = $this->cleanName(trim($fwdNode->first()->text()));
+            if (!empty($fwdName) && $fwdName !== 'Deleted Account') {
+                $id = 'fwd_' . md5($fwdName);
+                $forwardedAuthors[$id] = new Participant(id: $id, name: $fwdName, isForwarded: true);
             }
         }
 
-        $fwdNode = $node->filter('.forwarded.from_name, .tgme_widget_message_forwarded_from_name');
-        if ($fwdNode->count() > 0) {
-            $fwdName = trim($fwdNode->text());
-            if (!empty($fwdName) && $fwdName !== 'Deleted Account') {
-                $id = 'fwd_' . md5($fwdName);
-                $participants[$id] = new Participant(id: $id, name: $fwdName, isForwarded: true);
+        // Извлекаем автора сообщения (исключая тех, кто в .forwarded)
+        // Берём только .from_name который НЕ внутри .forwarded
+        $fromNode = $node->filter('.body > .from_name, .tgme_widget_message_owner_name');
+        if ($fromNode->count() > 0) {
+            $name = $this->cleanName(trim($fromNode->first()->text()));
+            if (!empty($name) && $name !== 'Deleted Account') {
+                $id = md5($name);
+                $participants[$id] = new Participant(id: $id, name: $name);
             }
         }
 
@@ -76,5 +81,14 @@ class HtmlExportParser implements ParserInterface
                 }
             }
         });
+    }
+
+    /**
+     * Очищает имя от даты и времени (которые могут быть в span внутри from_name для forwarded).
+     */
+    private function cleanName(string $name): string
+    {
+        // Удаляем дату/время вида " 07.12.2025 20:03:29" из конца имени
+        return preg_replace('/\s+\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}:\d{2}$/', '', $name) ?? $name;
     }
 }

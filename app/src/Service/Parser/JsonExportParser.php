@@ -25,6 +25,7 @@ class JsonExportParser implements ParserInterface
         $participants = [];
         $mentions = [];
         $channels = [];
+        $forwardedAuthors = [];
 
         foreach ($data["messages"] ?? [] as $message) {
             if ($this->isValidParticipant($message)) {
@@ -37,7 +38,7 @@ class JsonExportParser implements ParserInterface
             if (isset($message["forwarded_from"])) {
                 $forwardedParticipant = $this->extractForwardedParticipant($message);
                 if ($forwardedParticipant !== null) {
-                    $participants[$forwardedParticipant->id] = $forwardedParticipant;
+                    $forwardedAuthors[$forwardedParticipant->id] = $forwardedParticipant;
                 }
             }
 
@@ -45,7 +46,7 @@ class JsonExportParser implements ParserInterface
             $this->extractChannels($message, $channels);
         }
 
-        return new ProcessingResult($participants, $mentions, $channels);
+        return new ProcessingResult($participants, $mentions, $channels, $forwardedAuthors);
     }
 
     private function isValidParticipant(array $message): bool

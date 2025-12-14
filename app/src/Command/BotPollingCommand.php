@@ -72,6 +72,10 @@ class BotPollingCommand extends Command implements SignalableCommandInterface
                     } else {
                         $io->error("Ошибка: " . $serverResponse->getDescription());
                     }
+
+                    // Обрабатываем накопленные media groups
+                    GenericmessageCommand::processMediaGroups();
+
                 } catch (TelegramException $e) {
                     $io->error("Ошибка Telegram: " . $e->getMessage());
                     sleep(5);

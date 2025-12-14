@@ -21,24 +21,29 @@ class ExcelExporter
     {
         $spreadsheet = new Spreadsheet();
 
-        // Вкладка 1: Участники
+        // Вкладка 1: Участники чата
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Участники');
         $this->fillParticipantsSheet($sheet, $result);
 
-        // Вкладка 2: Упоминания
+        // Вкладка 2: Авторы пересланных сообщений
+        $forwardedSheet = $spreadsheet->createSheet();
+        $forwardedSheet->setTitle('Пересланные');
+        $this->fillForwardedAuthorsSheet($forwardedSheet, $result);
+
+        // Вкладка 3: Упоминания
         $mentionsSheet = $spreadsheet->createSheet();
         $mentionsSheet->setTitle('Упоминания');
         $this->fillMentionsSheet($mentionsSheet, $result);
 
-        // Вкладка 3: Каналы
+        // Вкладка 4: Каналы
         $channelsSheet = $spreadsheet->createSheet();
         $channelsSheet->setTitle('Каналы');
         $this->fillChannelsSheet($channelsSheet, $result);
 
         // Запись в память (не на диск!)
         $writer = new Xlsx($spreadsheet);
-        
+
         $tempStream = fopen('php://temp', 'r+');
         $writer->save($tempStream);
         rewind($tempStream);
@@ -58,13 +63,12 @@ class ExcelExporter
             'Описание',
             'Дата регистрации',
             'Наличие канала в профиле',
-            'Пересланное сообщение',
         ];
 
         $sheet->fromArray($headers, null, 'A1');
-        
+
         // Стилизация заголовков
-        $sheet->getStyle('A1:G1')->getFont()->setBold(true);
+        $sheet->getStyle('A1:F1')->getFont()->setBold(true);
 
         $row = 2;
         $exportDate = (new \DateTime())->format('d.m.Y H:i');
@@ -76,12 +80,37 @@ class ExcelExporter
             $sheet->setCellValue("D{$row}", $participant->bio ?? '-');
             $sheet->setCellValue("E{$row}", $participant->registrationDate ?? '-');
             $sheet->setCellValue("F{$row}", $participant->hasChannel ? 'Да' : 'Нет');
-            $sheet->setCellValue("G{$row}", $participant->isForwarded ? 'Да' : 'Нет');
             $row++;
         }
 
         // Автоширина колонок
-        foreach (range('A', 'G') as $col) {
+        foreach (range('A', 'F') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+    }
+
+    private function fillForwardedAuthorsSheet(Worksheet $sheet, ProcessingResult $result): void
+    {
+        $headers = [
+            'Дата экспорта',
+            'Username',
+            'Имя и фамилия',
+        ];
+
+        $sheet->fromArray($headers, null, 'A1');
+        $sheet->getStyle('A1:C1')->getFont()->setBold(true);
+
+        $row = 2;
+        $exportDate = (new \DateTime())->format('d.m.Y H:i');
+
+        foreach ($result->getForwardedAuthors() as $author) {
+            $sheet->setCellValue("A{$row}", $exportDate);
+            $sheet->setCellValue("B{$row}", $author->username ? '@' . $author->username : '-');
+            $sheet->setCellValue("C{$row}", $author->name ?? '-');
+            $row++;
+        }
+
+        foreach (range('A', 'C') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
     }

@@ -13,11 +13,13 @@ readonly class ProcessingResult
      * @param array<string, Participant> $participants Участники (ключ - id)
      * @param array<string, string> $mentions Упоминания (ключ - username)
      * @param array<string, string> $channels Каналы (ключ - id или username)
+     * @param array<string, Participant> $forwardedAuthors Авторы пересланных сообщений (не участники чата)
      */
     public function __construct(
         private array $participants = [],
         private array $mentions = [],
         private array $channels = [],
+        private array $forwardedAuthors = [],
     ) {}
 
     /**
@@ -44,6 +46,14 @@ readonly class ProcessingResult
         return $this->channels;
     }
 
+    /**
+     * @return array<string, Participant>
+     */
+    public function getForwardedAuthors(): array
+    {
+        return $this->forwardedAuthors;
+    }
+
     public function getParticipantsCount(): int
     {
         return count($this->participants);
@@ -57,6 +67,11 @@ readonly class ProcessingResult
     public function getChannelsCount(): int
     {
         return count($this->channels);
+    }
+
+    public function getForwardedAuthorsCount(): int
+    {
+        return count($this->forwardedAuthors);
     }
 
     public function getTotalCount(): int
@@ -73,6 +88,7 @@ readonly class ProcessingResult
             participants: array_merge($this->participants, $other->participants),
             mentions: array_merge($this->mentions, $other->mentions),
             channels: array_merge($this->channels, $other->channels),
+            forwardedAuthors: array_merge($this->forwardedAuthors, $other->forwardedAuthors),
         );
     }
 }

@@ -20,6 +20,7 @@ class TextFormatter
 
         // Заголовок
         $participantsCount = $result->getParticipantsCount();
+        $forwardedCount = $result->getForwardedAuthorsCount();
         $mentionsCount = $result->getMentionsCount();
         $channelsCount = $result->getChannelsCount();
 
@@ -28,11 +29,19 @@ class TextFormatter
 
         // Участники
         if ($participantsCount > 0) {
-            $lines[] = "\n👥 Участники ({$participantsCount}):";
+            $lines[] = "\n👥 Участники чата ({$participantsCount}):";
             foreach ($result->getParticipants() as $participant) {
                 $displayName = $participant->getDisplayName();
-                $suffix = $participant->isForwarded ? " (fwd)" : "";
-                $lines[] = "• {$displayName}{$suffix}";
+                $lines[] = "• {$displayName}";
+            }
+        }
+
+        // Авторы пересланных сообщений (не участники чата)
+        if ($forwardedCount > 0) {
+            $lines[] = "\n📩 Авторы пересланных сообщений ({$forwardedCount}):";
+            foreach ($result->getForwardedAuthors() as $author) {
+                $displayName = $author->getDisplayName();
+                $lines[] = "• {$displayName}";
             }
         }
 
@@ -54,7 +63,7 @@ class TextFormatter
 
         // Итог
         $lines[] = "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━";
-        $lines[] = "Всего: {$participantsCount} участников";
+        $lines[] = "Всего: {$participantsCount} участников, {$forwardedCount} авторов пересланных";
 
         return implode("\n", $lines);
     }
