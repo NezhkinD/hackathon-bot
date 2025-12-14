@@ -1,0 +1,39 @@
+services:
+   php-fpm:
+      restart: unless-stopped
+      env_file:
+         - ./app/.env
+      build:
+         context: .
+         dockerfile: .docker/Dockerfile.php
+      container_name: hackbot_php
+      volumes:
+         - ./app:/home/app
+      extra_hosts:
+         - "host.docker.internal:host-gateway"
+      networks:
+         - internal
+
+   nginx:
+      restart: unless-stopped
+      env_file:
+         - ./app/.env
+      container_name: hackbot_nginx
+      build:
+         context: .
+         dockerfile: .docker/Dockerfile.nginx
+      ports:
+         - "80:80"
+      volumes:
+         - ./app:/home/app
+      depends_on:
+         - php-fpm
+      networks:
+         - internal
+
+
+networks:
+   internal:
+      driver: bridge
+      ipam:
+         driver: default

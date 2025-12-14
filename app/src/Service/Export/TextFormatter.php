@@ -1,0 +1,61 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Export;
+
+use App\DTO\ProcessingResult;
+
+/**
+ * Форматирование результатов для текстового вывода.
+ */
+class TextFormatter
+{
+    /**
+     * Форматирует результат для отправки в чат.
+     */
+    public function format(ProcessingResult $result): string
+    {
+        $lines = [];
+
+        // Заголовок
+        $participantsCount = $result->getParticipantsCount();
+        $mentionsCount = $result->getMentionsCount();
+        $channelsCount = $result->getChannelsCount();
+
+        $lines[] = "📊 Результаты анализа экспорта чата\n";
+        $lines[] = "━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+
+        // Участники
+        if ($participantsCount > 0) {
+            $lines[] = "\n👥 Участники ({$participantsCount}):";
+            foreach ($result->getParticipants() as $participant) {
+                $displayName = $participant->getDisplayName();
+                $suffix = $participant->isForwarded ? " (fwd)" : "";
+                $lines[] = "• {$displayName}{$suffix}";
+            }
+        }
+
+        // Упоминания
+        if ($mentionsCount > 0) {
+            $lines[] = "\n📢 Упоминания ({$mentionsCount}):";
+            foreach ($result->getMentions() as $username) {
+                $lines[] = "• @{$username}";
+            }
+        }
+
+        // Каналы
+        if ($channelsCount > 0) {
+            $lines[] = "\n📺 Каналы ({$channelsCount}):";
+            foreach ($result->getChannels() as $channel) {
+                $lines[] = "• {$channel}";
+            }
+        }
+
+        // Итог
+        $lines[] = "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+        $lines[] = "Всего: {$participantsCount} участников";
+
+        return implode("\n", $lines);
+    }
+}

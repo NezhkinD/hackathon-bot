@@ -1,0 +1,11 @@
+FROM nginx
+
+ADD .docker/configs/nginx.conf /etc/nginx/conf.d/default.conf
+
+WORKDIR /home/app
+
+RUN chown -R www-data:www-data /var/cache
+RUN chmod -R 775 /var/cache
+
+RUN chown -R root:root /var/cache
+RUN chmod -R 775 /var/cache
