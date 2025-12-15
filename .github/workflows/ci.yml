@@ -55,6 +55,16 @@ jobs:
           key: ${{ runner.os }}-composer-${{ hashFiles('app/composer.lock') }}
           restore-keys: ${{ runner.os }}-composer-
 
+      - name: Create .env file
+        working-directory: app
+        run: |
+          echo "APP_ENV=test" > .env
+          echo "APP_SECRET=test_secret_for_ci" >> .env
+          echo "APP_SHARE_DIR=var/share" >> .env
+          echo "DEFAULT_URI=http://localhost" >> .env
+          echo "BOT_TOKEN=fake_token_for_ci" >> .env
+          echo "BOT_USERNAME=test_bot" >> .env
+
       - name: Install dependencies
         working-directory: app
         run: composer install --prefer-dist --no-progress --no-interaction
