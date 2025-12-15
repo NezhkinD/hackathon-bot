@@ -19,6 +19,7 @@ class GenericmessageCommand extends SystemCommand
     protected $version = "1.0.0";
 
     private const MAX_FILES_PER_GROUP = 10;
+    private const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB - ограничение Telegram Bot API
 
     private static ?ChatExportProcessor $processor = null;
 
@@ -100,7 +101,7 @@ class GenericmessageCommand extends SystemCommand
         if (self::$processor === null) {
             Request::sendMessage([
                 'chat_id' => $chatId,
-                'text' => 'Ошибка: процессор не инициализирован.',
+                'text' => '🔴 Ошибка: процессор не инициализирован.',
             ]);
             return;
         }
@@ -108,7 +109,7 @@ class GenericmessageCommand extends SystemCommand
         $fileNames = array_map(fn($f) => $f['fileName'], $files);
         Request::sendMessage([
             'chat_id' => $chatId,
-            'text' => sprintf("Обрабатываю %d файлов: %s...", count($files), implode(', ', $fileNames)),
+            'text' => sprintf("⏳ Обрабатываю %d файлов: " . PHP_EOL . "%s", count($files), implode(PHP_EOL, $fileNames)),
         ]);
 
         $downloadedFiles = [];
@@ -153,6 +154,12 @@ class GenericmessageCommand extends SystemCommand
         }
     }
 
+    private static function formatFileSize(int $bytes): string
+    {
+        $mb = $bytes / (1024 * 1024);
+        return number_format($mb, 1, '.', '') . ' MB';
+    }
+
     public function execute(): ServerResponse
     {
         $message = $this->getMessage();
@@ -180,10 +187,11 @@ class GenericmessageCommand extends SystemCommand
     }
 
     private function handleMediaGroupDocument(
-        int $chatId,
-        string|int $mediaGroupId,
+        int                                    $chatId,
+        string|int                             $mediaGroupId,
         \Longman\TelegramBot\Entities\Document $document
-    ): ServerResponse {
+    ): ServerResponse
+    {
         $fileName = $document->getFileName() ?? "unknown";
         $mimeType = $document->getMimeType() ?? "";
         $fileId = $document->getFileId();
@@ -195,6 +203,18 @@ class GenericmessageCommand extends SystemCommand
             return Request::sendMessage([
                 "chat_id" => $chatId,
                 "text" => "Неподдерживаемый формат файла: {$fileName}\n\nПоддерживаемые форматы: JSON, HTML",
+            ]);
+        }
+
+        $fileSize = $document->getFileSize() ?? 0;
+        if ($fileSize > self::MAX_FILE_SIZE_BYTES) {
+            return Request::sendMessage([
+                "chat_id" => $chatId,
+                "text" => sprintf(
+                    "Файл %s слишком большой (%s).\n\nTelegram позволяет ботам скачивать файлы размером до 20 MB.\n\nПожалуйста:\n- Разделите чат на несколько экспортов\n- Или экспортируйте меньший период времени",
+                    $fileName,
+                    self::formatFileSize($fileSize)
+                ),
             ]);
         }
 
@@ -253,6 +273,17 @@ class GenericmessageCommand extends SystemCommand
             ]);
         }
 
+        $fileSize = $document->getFileSize() ?? 0;
+        if ($fileSize > self::MAX_FILE_SIZE_BYTES) {
+            return Request::sendMessage([
+                "chat_id" => $chatId,
+                "text" => sprintf(
+                    "Файл слишком большой (%s).\n\nTelegram позволяет ботам скачивать файлы размером до 20 MB.\n\nПожалуйста:\n- Разделите чат на несколько экспортов\n- Или экспортируйте меньший период времени",
+                    self::formatFileSize($fileSize)
+                ),
+            ]);
+        }
+
         Request::sendMessage([
             "chat_id" => $chatId,
             "text" => "Обрабатываю файл: {$fileName}...",
@@ -266,7 +297,7 @@ class GenericmessageCommand extends SystemCommand
 
             $filePath = $file->getResult()->getFilePath();
             $downloadUrl = "https://api.telegram.org/file/bot" . $this->telegram->getApiKey() . "/" . $filePath;
-            
+
             $content = @file_get_contents($downloadUrl);
             if ($content === false) {
                 throw new \RuntimeException("Не удалось скачать файл");
@@ -275,7 +306,7 @@ class GenericmessageCommand extends SystemCommand
             if (self::$processor === null) {
                 throw new \RuntimeException("Processor не инициализирован");
             }
-            
+
             self::$processor->process($chatId, $content, $fileName);
 
             return Request::emptyResponse();

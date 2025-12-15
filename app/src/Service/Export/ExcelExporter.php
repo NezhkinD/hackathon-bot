@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Export;
 
 use App\DTO\ProcessingResult;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
@@ -76,8 +77,8 @@ class ExcelExporter
         foreach ($result->getParticipants() as $participant) {
             $sheet->setCellValue("A{$row}", $exportDate);
             $sheet->setCellValue("B{$row}", $participant->username ? '@' . $participant->username : '-');
-            $sheet->setCellValue("C{$row}", $participant->name ?? '-');
-            $sheet->setCellValue("D{$row}", $participant->bio ?? '-');
+            $sheet->setCellValueExplicit("C{$row}", $participant->name ?? '-', DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit("D{$row}", $participant->bio ?? '-', DataType::TYPE_STRING);
             $sheet->setCellValue("E{$row}", $participant->registrationDate ?? '-');
             $sheet->setCellValue("F{$row}", $participant->hasChannel ? 'Да' : 'Нет');
             $row++;
@@ -106,7 +107,7 @@ class ExcelExporter
         foreach ($result->getForwardedAuthors() as $author) {
             $sheet->setCellValue("A{$row}", $exportDate);
             $sheet->setCellValue("B{$row}", $author->username ? '@' . $author->username : '-');
-            $sheet->setCellValue("C{$row}", $author->name ?? '-');
+            $sheet->setCellValueExplicit("C{$row}", $author->name ?? '-', DataType::TYPE_STRING);
             $row++;
         }
 
@@ -138,7 +139,7 @@ class ExcelExporter
 
         $row = 2;
         foreach ($result->getChannels() as $channel) {
-            $sheet->setCellValue("A{$row}", $channel);
+            $sheet->setCellValueExplicit("A{$row}", $channel, DataType::TYPE_STRING);
             $row++;
         }
 

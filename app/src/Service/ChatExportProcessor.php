@@ -104,14 +104,16 @@ class ChatExportProcessor
         // Генерируем имя файла
         $outputFileName = 'participants_' . date('Y-m-d_H-i-s') . '.xlsx';
 
-        // Создаём временный файл для отправки
+        // Создаём временный файл для отправки (с расширением .xlsx)
         $tempFile = tempnam(sys_get_temp_dir(), 'tg_export_');
-        file_put_contents($tempFile, $excelContent);
+        $tempFileXlsx = $tempFile . '.xlsx';
+        rename($tempFile, $tempFileXlsx);
+        file_put_contents($tempFileXlsx, $excelContent);
 
         try {
             Request::sendDocument([
                 'chat_id' => $chatId,
-                'document' => Request::encodeFile($tempFile),
+                'document' => Request::encodeFile($tempFileXlsx),
                 'filename' => $outputFileName,
                 'caption' => sprintf(
                     "📊 Результат анализа\n\nУчастников: %d\nУпоминаний: %d\nКаналов: %d",
@@ -122,7 +124,7 @@ class ChatExportProcessor
             ]);
         } finally {
             // Удаляем временный файл
-            @unlink($tempFile);
+            @unlink($tempFileXlsx);
         }
     }
 }
