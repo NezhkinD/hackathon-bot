@@ -10,6 +10,8 @@ parameters:
     telegram.bot_token: '%env(BOT_TOKEN)%'
     telegram.bot_username: '%env(BOT_USERNAME)%'
     telegram.commands_path: '%kernel.project_dir%/src/Telegram/Command'
+    rate_limit.max_files: '%env(int:RATE_LIMIT_FILES)%'
+    rate_limit.window_seconds: '%env(int:RATE_LIMIT_WINDOW)%'
 
 services:
     # default configuration for services in *this* file
@@ -19,6 +21,8 @@ services:
         bind:
             $botToken: '%telegram.bot_token%'
             $botUsername: '%telegram.bot_username%'
+            $rateLimitMaxFiles: '%rate_limit.max_files%'
+            $rateLimitWindowSeconds: '%rate_limit.window_seconds%'
 
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name

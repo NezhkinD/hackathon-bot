@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Service\ChatExportProcessor;
+use App\Service\RateLimiter;
 use App\Service\Telegram\BotService;
 use App\Telegram\Command\GenericmessageCommand;
 use Longman\TelegramBot\Exception\TelegramException;
@@ -26,6 +27,8 @@ class BotPollingCommand extends Command implements SignalableCommandInterface
     public function __construct(
         private readonly BotService $botService,
         private readonly ChatExportProcessor $processor,
+        private readonly int $rateLimitMaxFiles,
+        private readonly int $rateLimitWindowSeconds,
     ) {
         parent::__construct();
     }
@@ -53,6 +56,14 @@ class BotPollingCommand extends Command implements SignalableCommandInterface
             // Устанавливаем processor для GenericmessageCommand
             GenericmessageCommand::setProcessor($this->processor);
 
+            // Конфигурируем rate limiter
+            RateLimiter::configure($this->rateLimitMaxFiles, $this->rateLimitWindowSeconds);
+            $io->info(sprintf(
+                "Rate limit: %d файлов за %d секунд",
+                $this->rateLimitMaxFiles,
+                $this->rateLimitWindowSeconds
+            ));
+
             $telegram = $this->botService->getTelegram();
             $io->success("Бот инициализирован: @" . $telegram->getBotUsername());
 
@@ -75,6 +86,9 @@ class BotPollingCommand extends Command implements SignalableCommandInterface
 
                     // Обрабатываем накопленные media groups
                     GenericmessageCommand::processMediaGroups();
+
+                    // Очистка устаревших записей rate limiter
+                    RateLimiter::cleanup();
 
                 } catch (TelegramException $e) {
                     $io->error("Ошибка Telegram: " . $e->getMessage());

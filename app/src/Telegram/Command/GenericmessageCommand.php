@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Telegram\Command;
 
 use App\Service\ChatExportProcessor;
+use App\Service\RateLimiter;
 use Longman\TelegramBot\Commands\SystemCommand;
 use Longman\TelegramBot\Entities\ServerResponse;
 use Longman\TelegramBot\Request;
@@ -165,6 +166,10 @@ class GenericmessageCommand extends SystemCommand
         $message = $this->getMessage();
         $chatId = $message->getChat()->getId();
 
+        // Получаем userId для rate limiting
+        $user = $message->getFrom();
+        $userId = $user?->getId() ?? $chatId;
+
         $document = $message->getDocument();
         if ($document === null) {
             $text = $message->getText();
@@ -175,6 +180,23 @@ class GenericmessageCommand extends SystemCommand
                 ]);
             }
             return Request::emptyResponse();
+        }
+
+        // Проверка rate limit
+        $rateLimitResult = RateLimiter::checkAndRecord($userId);
+        if (!$rateLimitResult['allowed']) {
+            return Request::sendMessage([
+                'chat_id' => $chatId,
+                'text' => sprintf(
+                    "Превышен лимит загрузки файлов.\n\n" .
+                    "Вы можете загружать до %d файлов за %d секунд.\n" .
+                    "Подождите %d сек. и попробуйте снова.\n\n" .
+                    "Это ограничение защищает бот от перегрузки.",
+                    $rateLimitResult['limit'],
+                    $rateLimitResult['window'],
+                    $rateLimitResult['retryAfter']
+                ),
+            ]);
         }
 
         $mediaGroupId = $message->getMediaGroupId();

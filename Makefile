@@ -4,3 +4,6 @@ unlock:
 
 test:
 	docker compose exec php-fpm composer test
+
+run:
+	docker-compose up -d
