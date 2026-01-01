@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Telegram\Command;
 
+use App\Service\RateLimiter;
 use Longman\TelegramBot\Commands\UserCommand;
 use Longman\TelegramBot\Entities\ServerResponse;
 use Longman\TelegramBot\Request;
@@ -23,7 +24,9 @@ class StartCommand extends UserCommand
         $message = $this->getMessage();
         $chatId = $message->getChat()->getId();
 
-        $text = <<<TEXT
+        $config = RateLimiter::getConfig();
+
+        $text = sprintf(<<<TEXT
 Привет! Я бот для извлечения участников из экспорта чата Telegram.
 
 Как использовать:
@@ -36,8 +39,10 @@ class StartCommand extends UserCommand
 • Если участников < 50 — пришлю список в чат
 • Если участников ≥ 51 — отправлю Excel-файл
 
+Ограничения: до %d файлов за %d сек., макс. размер 20 МБ.
+
 Используйте /help для подробной справки.
-TEXT;
+TEXT, $config['maxFiles'], $config['windowSeconds']);
 
         return Request::sendMessage([
             'chat_id' => $chatId,

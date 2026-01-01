@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Telegram\Command;
 
+use App\Service\RateLimiter;
 use Longman\TelegramBot\Commands\UserCommand;
 use Longman\TelegramBot\Entities\ServerResponse;
 use Longman\TelegramBot\Request;
@@ -23,7 +24,9 @@ class HelpCommand extends UserCommand
         $message = $this->getMessage();
         $chatId = $message->getChat()->getId();
 
-        $text = <<<TEXT
+        $config = RateLimiter::getConfig();
+
+        $text = sprintf(<<<TEXT
 📖 Справка по использованию бота
 
 🔹 Поддерживаемые форматы:
@@ -36,9 +39,10 @@ class HelpCommand extends UserCommand
 3. Меню (⋮) → Экспортировать историю чата
 4. Выберите формат и сохраните
 
-🔹 Ограничения Telegram:
+🔹 Ограничения:
 • Максимальный размер файла: 20 МБ
 • Можно отправить до 10 файлов за раз
+• Лимит загрузки: %d файлов за %d сек. на пользователя
 
 🔹 Что извлекается:
 • Авторы сообщений
@@ -59,7 +63,7 @@ class HelpCommand extends UserCommand
 Команды:
 /start — начать работу
 /help — эта справка
-TEXT;
+TEXT, $config['maxFiles'], $config['windowSeconds']);
 
         return Request::sendMessage([
             'chat_id' => $chatId,
